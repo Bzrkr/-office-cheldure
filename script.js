@@ -1,11 +1,7 @@
-const dayNames = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"];
+const dayNames = ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"];
 const IPEauditories = ["502-2 к.", "601-2 к.", "603-2 к.", "604-2 к.", "605-2 к.", "607-2 к.", "611-2 к.", "613-2 к.", "615-2 к."];
 
-const currentDate = new Date();
-const dayNumber = currentDate.getDay() - 1; // getDay() returns 0 for Sunday, so adjust by -1
-const dayName = dayNames[dayNumber];
-
-document.getElementById('header').innerText = `--------------${dayName}-------------`;
+document.getElementById('header').innerText = '-------------- Расписание IPE -------------';
 
 async function fetchJson(url) {
     const response = await fetch(url);
@@ -41,8 +37,10 @@ function timeInRange(start, end, x) {
     return start <= x && x <= end;
 }
 
-async function requestDaily(aud, teachers, teacherSchedules, currentWeek) {
+async function requestDaily(aud, teachers, teacherSchedules, currentWeek, selectedDate) {
     const schedule = {};
+    const dayName = dayNames[selectedDate.getDay()];
+
     for (const teacher of teachers) {
         const teacherSchedule = teacherSchedules[teacher.urlId] || {};
         const weekDaySchedule = teacherSchedule.schedules?.[dayName] || [];
@@ -53,9 +51,9 @@ async function requestDaily(aud, teachers, teacherSchedules, currentWeek) {
                 const end = parseDate(lesson.endLessonDate);
                 const lessonDate = parseDate(lesson.dateLesson);
 
-                if (start && end && timeInRange(start, end, currentDate)) {
+                if (start && end && timeInRange(start, end, selectedDate)) {
                     addLessonToSchedule(schedule, lesson, teacher);
-                } else if (lessonDate && currentDate.toDateString() === lessonDate.toDateString()) {
+                } else if (lessonDate && selectedDate.toDateString() === lessonDate.toDateString()) {
                     addLessonToSchedule(schedule, lesson, teacher);
                 }
             }
@@ -73,10 +71,11 @@ function printDict(container, dict) {
     }
 }
 
-async function printSchedulesIPE() {
+async function printSchedulesIPE(selectedDate) {
     const { teachers, teacherSchedules } = await getTeacherInfo();
     const currentWeek = await fetchJson('https://iis.bsuir.by/api/v1/schedule/current-week');
     const schedulesContainer = document.getElementById('schedules');
+    schedulesContainer.innerHTML = ''; // Clear previous schedules
 
     for (const aud of IPEauditories) {
         const audContainer = document.createElement('div');
@@ -84,7 +83,7 @@ async function printSchedulesIPE() {
         audContainer.innerText = `-------------------------${aud}-------------------------`;
         schedulesContainer.appendChild(audContainer);
 
-        const dailySchedule = await requestDaily(aud, teachers, teacherSchedules, currentWeek);
+        const dailySchedule = await requestDaily(aud, teachers, teacherSchedules, currentWeek, selectedDate);
         const sortedSchedule = Object.keys(dailySchedule).sort().reduce((obj, key) => {
             obj[key] = dailySchedule[key];
             return obj;
@@ -94,4 +93,12 @@ async function printSchedulesIPE() {
     }
 }
 
-printSchedulesIPE();
+document.getElementById('datePicker').addEventListener('change', (event) => {
+    const selectedDate = new Date(event.target.value);
+    printSchedulesIPE(selectedDate);
+});
+
+// Initialize with the current date
+const initialDate = new Date();
+document.getElementById('datePicker').valueAsDate = initialDate;
+printSchedulesIPE(initialDate);
