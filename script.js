@@ -1,7 +1,7 @@
 const dayNames = ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"];
 const IPEauditories = ["502-2 к.", "601-2 к.", "603-2 к.", "604-2 к.", "605-2 к.", "607-2 к.", "611-2 к.", "613-2 к.", "615-2 к."];
 
-document.getElementById('header').innerText = '-------------- Расписание IPE -------------';
+document.getElementById('header').innerText = 'Расписание аудиторий';
 
 async function fetchJson(url) {
     const response = await fetch(url);
@@ -71,34 +71,51 @@ function printDict(container, dict) {
     }
 }
 
-async function printSchedulesIPE(selectedDate) {
+// Add a loading indicator function
+function showLoadingIndicator() {
+    const loadingIndicator = document.getElementById('loading-indicator');
+    loadingIndicator.style.display = 'block';
+  }
+  
+  function hideLoadingIndicator() {
+    const loadingIndicator = document.getElementById('loading-indicator');
+    loadingIndicator.style.display = 'none';
+  }
+  
+  // Update the printSchedulesIPE function to show the loading indicator
+  async function printSchedulesIPE(selectedDate) {
+    showLoadingIndicator(); // Show the loading indicator
+  
     const { teachers, teacherSchedules } = await getTeacherInfo();
     const currentWeek = await fetchJson('https://iis.bsuir.by/api/v1/schedule/current-week');
     const schedulesContainer = document.getElementById('schedules');
     schedulesContainer.innerHTML = ''; // Clear previous schedules
-
+  
     for (const aud of IPEauditories) {
-        const audContainer = document.createElement('div');
-        audContainer.className = 'auditory';
-        audContainer.innerText = `-------------------------${aud}-------------------------`;
-        schedulesContainer.appendChild(audContainer);
-
-        const dailySchedule = await requestDaily(aud, teachers, teacherSchedules, currentWeek, selectedDate);
-        const sortedSchedule = Object.keys(dailySchedule).sort().reduce((obj, key) => {
-            obj[key] = dailySchedule[key];
-            return obj;
-        }, {});
-
-        printDict(audContainer, sortedSchedule);
+      const audContainer = document.createElement('div');
+      audContainer.className = 'auditory';
+      audContainer.innerText = `-------------------------${aud}-------------------------`;
+      schedulesContainer.appendChild(audContainer);
+  
+      const dailySchedule = await requestDaily(aud, teachers, teacherSchedules, currentWeek, selectedDate);
+      const sortedSchedule = Object.keys(dailySchedule).sort().reduce((obj, key) => {
+        obj[key] = dailySchedule[key];
+        return obj;
+      }, {});
+  
+      printDict(audContainer, sortedSchedule);
     }
-}
-
-document.getElementById('datePicker').addEventListener('change', (event) => {
+  
+    hideLoadingIndicator(); // Hide the loading indicator
+  }
+  
+  // Update the event listener to show the loading indicator
+  document.getElementById('datePicker').addEventListener('change', (event) => {
     const selectedDate = new Date(event.target.value);
     printSchedulesIPE(selectedDate);
-});
-
-// Initialize with the current date
-const initialDate = new Date();
-document.getElementById('datePicker').valueAsDate = initialDate;
-printSchedulesIPE(initialDate);
+  });
+  
+  // Initialize with the current date
+  const initialDate = new Date();
+  document.getElementById('datePicker').valueAsDate = initialDate;
+  printSchedulesIPE(initialDate);
